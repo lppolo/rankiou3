@@ -8,6 +8,7 @@ import AuthModal from '@/components/AuthModal'
 import OnboardingModal from '@/components/OnboardingModal'
 import CreatePollModal from '@/components/CreatePollModal'
 import AdminView from '@/components/AdminView'
+import ProfileModal from '@/components/ProfileModal'
 import type { Advertisement, Poll, SortOrder, CategoryFilter, ShowFilter, User } from '@/types'
 import { AuthProvider, useAuth } from '../contexts/AuthContext'
 import { usePolls, useAdvertisements, voteOnPoll, favoritePoll } from '@/hooks/usePolls'
@@ -25,6 +26,7 @@ const HomeContainer: React.FC = () => {
   const [currentView, setCurrentView] = useState<'INICIO' | 'ACOMPANHAR' | 'RANKARDS' | 'ADMIN'>('INICIO')
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
   type FilterState = { sortOrder: SortOrder; categoryFilter: CategoryFilter; showFilter: ShowFilter; searchTerm: string }
   const [filterState, setFilter] = useState<FilterState>({
@@ -146,6 +148,8 @@ const HomeContainer: React.FC = () => {
         onClickInicio={() => setCurrentView('INICIO')}
         onClickAcompanhar={() => (user ? setCurrentView('ACOMPANHAR') : setShowAuthModal(true))}
         onClickRankards={() => setCurrentView('RANKARDS')}
+        isAdmin={user?.role === 'admin'}
+        onClickAdmin={() => setCurrentView('ADMIN')}
         userName={user?.name || null}
         userAvatarUrl={user?.avatar_url || null}
         onLogin={() => setShowAuthModal(true)}
@@ -201,11 +205,12 @@ const HomeContainer: React.FC = () => {
           setCurrentView(v)
         }}
         onOpenCreatePollModal={() => (user ? setShowCreate(true) : setShowAuthModal(true))}
-        onOpenProfileModal={() => (user ? setShowOnboarding(true) : setShowAuthModal(true))}
+        onOpenProfileModal={() => (user ? setShowProfile(true) : setShowAuthModal(true))}
       />
       {showAuthModal && <AuthModal onLogin={signInWithGoogle} onClose={() => setShowAuthModal(false)} />}
       {showOnboarding && <OnboardingModal onSave={saveCity} onClose={() => setShowOnboarding(false)} />}
       {showCreate && <CreatePollModal onCreate={createPoll} onClose={() => setShowCreate(false)} defaultCity={user?.preferred_city || null} />}
+      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
     </>
   )
 }

@@ -11,9 +11,11 @@ interface HeaderProps {
   onLogout?: () => void
   onCreate?: () => void
   onSeed?: () => void // novo: botão de exemplos (opcional)
+  isAdmin?: boolean
+  onClickAdmin?: () => void
 }
 
-export const Header: React.FC<HeaderProps> = ({ onClickLogo, onClickInicio, onClickAcompanhar, onClickRankards, userName, userAvatarUrl, onLogin, onLogout, onCreate, onSeed }) => {
+export const Header: React.FC<HeaderProps> = ({ onClickLogo, onClickInicio, onClickAcompanhar, onClickRankards, userName, userAvatarUrl, onLogin, onLogout, onCreate, onSeed, isAdmin, onClickAdmin }) => {
   return (
     <header className="bg-brand-surface border-b border-brand-border sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -25,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({ onClickLogo, onClickInicio, onCl
             <button onClick={onClickInicio} className="hover:text-white">INÍCIO</button>
             <button onClick={onClickAcompanhar} className="hover:text-white">ACOMPANHAR</button>
             <button onClick={onClickRankards} className="hover:text-white">RANKARDS</button>
+            {isAdmin && <button onClick={onClickAdmin} className="text-brand-teal hover:text-white">ADMIN</button>}
           </div>
           <div className="flex items-center space-x-3">
             {onSeed && (

@@ -33,6 +33,11 @@ export const AdminView: React.FC = () => {
     if (error) { alert(error.message); return }
     await load()
   }
+  const runBot = async () => {
+    const { error } = await supabase.rpc('run_role_bot_now')
+    if (error) { alert(error.message); return }
+    alert('Bot executado. Verifique o feed ROLÊ.')
+  }
 
   if (loading) return <div className="container mx-auto px-4 py-6 text-gray-300">Carregando…</div>
   if (error) return <div className="container mx-auto px-4 py-6 text-red-400">Erro: {error}</div>
@@ -40,6 +45,9 @@ export const AdminView: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-6">
       <h2 className="text-2xl font-bold text-white mb-4">Moderação — Pendentes</h2>
+      <div className="flex justify-end mb-3">
+        <button onClick={runBot} className="px-3 py-2 rounded-md bg-brand-orange text-black font-bold">Rodar bot agora</button>
+      </div>
       {rows.length === 0 ? (
         <div className="text-gray-400">Nada pendente no momento.</div>
       ) : (
