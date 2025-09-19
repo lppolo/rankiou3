@@ -5,7 +5,8 @@ export const BottomNavBar: React.FC<{
   setCurrentView: (v: 'INICIO' | 'ACOMPANHAR' | 'RANKARDS' | 'ADMIN') => void
   onOpenCreatePollModal: () => void
   onOpenProfileModal: () => void
-}> = ({ currentView, setCurrentView, onOpenCreatePollModal, onOpenProfileModal }) => {
+  isAdmin?: boolean
+}> = ({ currentView, setCurrentView, onOpenCreatePollModal, onOpenProfileModal, isAdmin }) => {
   const NavItem: React.FC<{ label: string; icon: JSX.Element; isActive: boolean; onClick: () => void }> = ({ label, icon, isActive, onClick }) => (
     <button onClick={onClick} className={`flex flex-col items-center justify-center w-full pt-2 pb-1 transition-colors duration-200 ${isActive ? 'text-brand-teal' : 'text-gray-400 hover:text-white'}`}>
       {icon}
@@ -21,6 +22,7 @@ export const BottomNavBar: React.FC<{
         <div className="w-16 h-16" />
         <NavItem label="ACOMPANHAR" isActive={currentView === 'ACOMPANHAR'} onClick={() => setCurrentView('ACOMPANHAR')} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>} />
         <NavItem label="PERFIL" isActive={false} onClick={onOpenProfileModal} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>} />
+        {isAdmin && <NavItem label="ADMIN" isActive={currentView === 'ADMIN'} onClick={() => setCurrentView('ADMIN')} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-7 4h8M5 8h14M5 8l1-3h12l1 3" /></svg>} />}
       </div>
       <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2">
         <button onClick={onOpenCreatePollModal} className="w-20 h-20 bg-brand-orange rounded-full flex items-center justify-center text-black shadow-3d-orange active:shadow-3d-orange-active active:scale-95 transition-all">

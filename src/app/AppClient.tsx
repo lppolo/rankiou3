@@ -46,8 +46,24 @@ const HomeContainer: React.FC = () => {
   const fetchedAds = useAdvertisements(adsScope, preferredCity)
   const [localPolls, setLocalPolls] = useState<Poll[]>([])
   const [autoSeeded, setAutoSeeded] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   React.useEffect(() => { setLocalPolls(fetchedPolls) }, [fetchedPolls])
+
+  // Checa admin via RPC para evitar cache do perfil
+  React.useEffect(() => {
+    const run = async () => {
+      if (!user) { setIsAdmin(false); return }
+      // Fallback imediato baseado no perfil carregado
+      if (user.role === 'admin') setIsAdmin(true)
+      try {
+        const { data, error } = await supabase.rpc('is_admin_self')
+        if (error) { console.warn('is_admin_self error', error) }
+        else if (typeof data === 'boolean') setIsAdmin(data || user.role === 'admin')
+      } catch (e) { console.warn('is_admin_self exception', e) }
+    }
+    run()
+  }, [user])
 
   // Dev helper: auto-seed ao logar se não houver enquetes
   React.useEffect(() => {
@@ -137,9 +153,10 @@ const HomeContainer: React.FC = () => {
   const handleSeed = async () => {
     if (!user) { setShowAuthModal(true); return }
     try {
-      await seedDemoData({ userId: user.id, city: user.preferred_city || 'São Paulo' })
+      const res = await seedDemoData({ userId: user.id, city: user.preferred_city || 'São Paulo' })
+      if (typeof window !== 'undefined') console.log('seedDemoData:', res)
       await reload()
-    } catch (e) { console.error(e) }
+    } catch (e) { console.error('Erro no seed:', e) }
   }
 
   return (
@@ -148,7 +165,7 @@ const HomeContainer: React.FC = () => {
         onClickInicio={() => setCurrentView('INICIO')}
         onClickAcompanhar={() => (user ? setCurrentView('ACOMPANHAR') : setShowAuthModal(true))}
         onClickRankards={() => setCurrentView('RANKARDS')}
-        isAdmin={user?.role === 'admin'}
+        isAdmin={isAdmin}
         onClickAdmin={() => setCurrentView('ADMIN')}
         userName={user?.name || null}
         userAvatarUrl={user?.avatar_url || null}
@@ -206,6 +223,7 @@ const HomeContainer: React.FC = () => {
         }}
         onOpenCreatePollModal={() => (user ? setShowCreate(true) : setShowAuthModal(true))}
         onOpenProfileModal={() => (user ? setShowProfile(true) : setShowAuthModal(true))}
+        isAdmin={isAdmin}
       />
       {showAuthModal && <AuthModal onLogin={signInWithGoogle} onClose={() => setShowAuthModal(false)} />}
       {showOnboarding && <OnboardingModal onSave={saveCity} onClose={() => setShowOnboarding(false)} />}
