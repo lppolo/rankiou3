@@ -22,6 +22,9 @@ export const usePolls = (scope?: 'MUNDO' | 'LOCAL' | 'ROLÊ', city?: string | nu
           `)
           .order('created_at', { ascending: false })
 
+        // Feed público: apenas enquetes aprovadas
+        query = query.eq('status', 'APPROVED')
+
         if (scope) query = query.eq('scope', scope)
         if (scope && scope !== 'MUNDO' && city) query = query.eq('location_city', city)
 

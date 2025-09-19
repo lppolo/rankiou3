@@ -2,6 +2,9 @@ import React from 'react'
 
 interface HeaderProps {
   onClickLogo?: () => void
+  onClickInicio?: () => void
+  onClickAcompanhar?: () => void
+  onClickRankards?: () => void
   userName?: string | null
   userAvatarUrl?: string | null
   onLogin?: () => void
@@ -10,7 +13,7 @@ interface HeaderProps {
   onSeed?: () => void // novo: botão de exemplos (opcional)
 }
 
-export const Header: React.FC<HeaderProps> = ({ onClickLogo, userName, userAvatarUrl, onLogin, onLogout, onCreate, onSeed }) => {
+export const Header: React.FC<HeaderProps> = ({ onClickLogo, onClickInicio, onClickAcompanhar, onClickRankards, userName, userAvatarUrl, onLogin, onLogout, onCreate, onSeed }) => {
   return (
     <header className="bg-brand-surface border-b border-brand-border sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -19,13 +22,13 @@ export const Header: React.FC<HeaderProps> = ({ onClickLogo, userName, userAvata
             RANK<span className="text-brand-orange">IOU</span>
           </button>
           <div className="hidden md:flex items-center space-x-6 font-semibold text-gray-400">
-            <span>INÍCIO</span>
-            <span>ACOMPANHAR</span>
-            <span>RANKARDS</span>
+            <button onClick={onClickInicio} className="hover:text-white">INÍCIO</button>
+            <button onClick={onClickAcompanhar} className="hover:text-white">ACOMPANHAR</button>
+            <button onClick={onClickRankards} className="hover:text-white">RANKARDS</button>
           </div>
           <div className="flex items-center space-x-3">
             {onSeed && (
-              <button onClick={onSeed} className="hidden md:inline-flex bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg">EXEMPLOS</button>
+              <button onClick={onSeed} className="bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg hidden md:inline-flex">EXEMPLOS</button>
             )}
             <button onClick={onCreate} className="hidden md:inline-flex bg-brand-orange text-black font-bold py-2 px-4 rounded-lg shadow-3d-orange active:shadow-3d-orange-active active:scale-95 transition-all">CRIAR</button>
             {userName ? (
@@ -40,6 +43,11 @@ export const Header: React.FC<HeaderProps> = ({ onClickLogo, userName, userAvata
             )}
           </div>
         </div>
+        {onSeed && (
+          <div className="md:hidden pb-3 flex justify-end">
+            <button onClick={onSeed} className="bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg">EXEMPLOS</button>
+          </div>
+        )}
       </div>
     </header>
   )

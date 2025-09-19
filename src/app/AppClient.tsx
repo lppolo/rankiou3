@@ -2,9 +2,12 @@
 import React, { useMemo, useState } from 'react'
 import { Header } from '@/components/Header'
 import { HomeView } from '@/components/HomeView'
+import { AcompanharView } from '@/components/AcompanharView'
+import { BottomNavBar } from '@/components/BottomNavBar'
 import AuthModal from '@/components/AuthModal'
 import OnboardingModal from '@/components/OnboardingModal'
 import CreatePollModal from '@/components/CreatePollModal'
+import AdminView from '@/components/AdminView'
 import type { Advertisement, Poll, SortOrder, CategoryFilter, ShowFilter, User } from '@/types'
 import { AuthProvider, useAuth } from '../contexts/AuthContext'
 import { usePolls, useAdvertisements, voteOnPoll, favoritePoll } from '@/hooks/usePolls'
@@ -19,6 +22,7 @@ const mockUser: User = {
 const HomeContainer: React.FC = () => {
   const { isAuthenticated, signInWithGoogle, user } = useAuth()
   const [activeFeed, setActiveFeed] = useState<'MUNDO' | 'LOCAL' | 'ROLÊ'>('MUNDO')
+  const [currentView, setCurrentView] = useState<'INICIO' | 'ACOMPANHAR' | 'RANKARDS' | 'ADMIN'>('INICIO')
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
@@ -39,8 +43,24 @@ const HomeContainer: React.FC = () => {
   const adsScope: 'MUNDO' | 'LOCAL' = activeFeed === 'LOCAL' ? 'LOCAL' : 'MUNDO'
   const fetchedAds = useAdvertisements(adsScope, preferredCity)
   const [localPolls, setLocalPolls] = useState<Poll[]>([])
+  const [autoSeeded, setAutoSeeded] = useState(false)
 
   React.useEffect(() => { setLocalPolls(fetchedPolls) }, [fetchedPolls])
+
+  // Dev helper: auto-seed ao logar se não houver enquetes
+  React.useEffect(() => {
+    const run = async () => {
+      if (process.env.NODE_ENV === 'production') return
+      if (!user || autoSeeded) return
+      if ((fetchedPolls || []).length > 0) return
+      try {
+        await seedDemoData({ userId: user.id, city: user.preferred_city || 'São Paulo' })
+        setAutoSeeded(true)
+        await reload()
+      } catch {}
+    }
+    run()
+  }, [user, fetchedPolls, autoSeeded, reload])
 
   const handleVote = async (pollId: string, optionText: string) => {
     // optimistic update
@@ -66,7 +86,15 @@ const HomeContainer: React.FC = () => {
     }))
     try { await supabase.rpc('change_vote', { p_poll_id: pollId, p_new_option_text: optionText }) } catch (e) { console.error(e) }
   }
-  const handleAddOption = (_poll: Poll) => { console.log('add option') }
+  const handleAddOption = async (poll: Poll) => {
+    if (!user) { setShowAuthModal(true); return }
+    const text = typeof window !== 'undefined' ? window.prompt('Qual opção você quer adicionar?') : null
+    if (!text || !text.trim()) return
+    try {
+      await supabase.rpc('add_option_and_vote', { p_poll_id: poll.id, p_option_text: text.trim() })
+      await reload()
+    } catch (e) { console.error(e) }
+  }
   const handleReport = (_poll: Poll) => { console.log('report') }
   const handleFavorite = async (pollId: string) => {
     try {
@@ -84,19 +112,21 @@ const HomeContainer: React.FC = () => {
 
   const createPoll = async (p: { title: string; category: any; scope: 'MUNDO'|'LOCAL'|'ROLÊ'; location_city?: string|null; options: string[] }) => {
     if (!user) { setShowAuthModal(true); return }
-    const { data, error } = await supabase.from('polls').insert({
-      author_id: user.id,
-      title: p.title,
-      category: p.category,
-      type: 'ENQUETE',
-      scope: p.scope,
-      location_city: p.scope === 'MUNDO' ? null : (p.location_city || user.preferred_city || null),
-      status: 'APPROVED'
-    }).select('id').single()
-    if (error || !data) { console.error(error); return }
-    const pollId = data.id
-    const rows = p.options.map(text => ({ poll_id: pollId, text }))
-    await supabase.from('poll_options').insert(rows)
+    try {
+      const { data, error } = await supabase.rpc('create_poll_with_options', {
+        p_title: p.title,
+        p_category: p.category,
+        p_type: 'ENQUETE',
+        p_scope: p.scope,
+        p_location_city: p.scope === 'MUNDO' ? null : (p.location_city || user.preferred_city || null),
+        p_options: p.options,
+        p_image_url: null,
+      })
+      if (error) throw error
+    } catch (e: any) {
+      if (typeof window !== 'undefined') alert(e.message || 'Erro ao criar enquete. Verifique seus pontos.')
+      console.error(e); return
+    }
     setShowCreate(false)
     // atualiza lista para exibir a nova enquete imediatamente
     await reload()
@@ -112,7 +142,10 @@ const HomeContainer: React.FC = () => {
 
   return (
     <>
-      <Header onClickLogo={() => setActiveFeed('MUNDO')}
+      <Header onClickLogo={() => { setActiveFeed('MUNDO'); setCurrentView('INICIO') }}
+        onClickInicio={() => setCurrentView('INICIO')}
+        onClickAcompanhar={() => (user ? setCurrentView('ACOMPANHAR') : setShowAuthModal(true))}
+        onClickRankards={() => setCurrentView('RANKARDS')}
         userName={user?.name || null}
         userAvatarUrl={user?.avatar_url || null}
         onLogin={() => setShowAuthModal(true)}
@@ -120,25 +153,56 @@ const HomeContainer: React.FC = () => {
         onCreate={() => (user ? setShowCreate(true) : setShowAuthModal(true))}
         onSeed={user && process.env.NODE_ENV !== 'production' ? handleSeed : undefined}
       />
-      <div className="container mx-auto px-4 py-6">
-        <HomeView
-          polls={localPolls}
-          advertisements={fetchedAds}
-          user={user || null}
-          isAuthenticated={isAuthenticated}
-          activeFeed={activeFeed}
-          setActiveFeed={setActiveFeed}
+      {currentView === 'INICIO' && (
+        <div className="container mx-auto px-4 py-6">
+          <HomeView
+            polls={localPolls}
+            advertisements={fetchedAds}
+            user={user || null}
+            isAuthenticated={isAuthenticated}
+            activeFeed={activeFeed}
+            setActiveFeed={setActiveFeed}
+            onVote={handleVote}
+            onChangeVote={handleChangeVote}
+            onAddOption={handleAddOption}
+            onReport={handleReport}
+            onFavorite={handleFavorite}
+            onOpenShareModal={handleShare}
+            onOpenAuthModal={() => (user ? setShowOnboarding(true) : setShowAuthModal(true))}
+            filterState={filterState}
+            setFilterState={setFilterState}
+          />
+        </div>
+      )}
+      {currentView === 'ACOMPANHAR' && user && (
+        <AcompanharView
+          user={user}
           onVote={handleVote}
           onChangeVote={handleChangeVote}
-          onAddOption={handleAddOption}
-          onReport={handleReport}
           onFavorite={handleFavorite}
-          onOpenShareModal={handleShare}
-          onOpenAuthModal={() => (user ? setShowOnboarding(true) : setShowAuthModal(true))}
-          filterState={filterState}
-          setFilterState={setFilterState}
+          onAddOption={(pollId, text) => { /* opcional: abrir modal próprio futuramente */ }}
+          onReport={() => {}}
+          onShare={() => {}}
         />
-      </div>
+      )}
+      {currentView === 'RANKARDS' && (
+        <div className="container mx-auto px-4 py-6 text-center text-gray-300">
+          <h2 className="text-2xl font-bold text-white mb-2">Rankards</h2>
+          <p>Mecânica chegando em breve. Interaja nas enquetes para ganhar pontos!</p>
+        </div>
+      )}
+      {currentView === 'ADMIN' && user?.role === 'admin' && (
+        <AdminView />
+      )}
+      <BottomNavBar
+        currentView={currentView}
+        setCurrentView={(v) => {
+          if (v === 'ACOMPANHAR' && !user) { setShowAuthModal(true); return }
+          setCurrentView(v)
+        }}
+        onOpenCreatePollModal={() => (user ? setShowCreate(true) : setShowAuthModal(true))}
+        onOpenProfileModal={() => (user ? setShowOnboarding(true) : setShowAuthModal(true))}
+      />
       {showAuthModal && <AuthModal onLogin={signInWithGoogle} onClose={() => setShowAuthModal(false)} />}
       {showOnboarding && <OnboardingModal onSave={saveCity} onClose={() => setShowOnboarding(false)} />}
       {showCreate && <CreatePollModal onCreate={createPoll} onClose={() => setShowCreate(false)} defaultCity={user?.preferred_city || null} />}
