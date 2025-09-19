@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import type { Poll, Advertisement } from '@/types'
 
@@ -7,9 +7,8 @@ export const usePolls = (scope?: 'MUNDO' | 'LOCAL' | 'ROLÊ', city?: string | nu
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     let mounted = true
-    const load = async () => {
       setLoading(true)
       setError(null)
       try {
@@ -54,12 +53,16 @@ export const usePolls = (scope?: 'MUNDO' | 'LOCAL' | 'ROLÊ', city?: string | nu
       } finally {
         if (mounted) setLoading(false)
       }
-    }
-    load()
-    return () => { mounted = false }
+    // mark not mounted to avoid state updates after unmount
+    mounted = false
   }, [scope, city])
 
-  return { polls, loading, error }
+  useEffect(() => {
+    load()
+    return () => { /* no-op: load handles mounted flag */ }
+  }, [load])
+
+  return { polls, loading, error, reload: load }
 }
 
 export const voteOnPoll = async (pollId: string, optionText: string) => {

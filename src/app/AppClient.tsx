@@ -9,6 +9,7 @@ import type { Advertisement, Poll, SortOrder, CategoryFilter, ShowFilter, User }
 import { AuthProvider, useAuth } from '../contexts/AuthContext'
 import { usePolls, useAdvertisements, voteOnPoll, favoritePoll } from '@/hooks/usePolls'
 import { supabase } from '@/lib/supabaseClient'
+import { seedDemoData } from '../lib/seed'
 
 const mockUser: User = {
   id: '1', name: 'Convidado', avatar_url: 'https://api.dicebear.com/7.x/identicon/svg?seed=guest', username: 'guest', role: 'user', creation_points: 0,
@@ -34,7 +35,7 @@ const HomeContainer: React.FC = () => {
   }
 
   const preferredCity = user?.preferred_city ?? null
-  const { polls: fetchedPolls } = usePolls(activeFeed, preferredCity)
+  const { polls: fetchedPolls, reload } = usePolls(activeFeed, preferredCity)
   const adsScope: 'MUNDO' | 'LOCAL' = activeFeed === 'LOCAL' ? 'LOCAL' : 'MUNDO'
   const fetchedAds = useAdvertisements(adsScope, preferredCity)
   const [localPolls, setLocalPolls] = useState<Poll[]>([])
@@ -97,6 +98,16 @@ const HomeContainer: React.FC = () => {
     const rows = p.options.map(text => ({ poll_id: pollId, text }))
     await supabase.from('poll_options').insert(rows)
     setShowCreate(false)
+    // atualiza lista para exibir a nova enquete imediatamente
+    await reload()
+  }
+
+  const handleSeed = async () => {
+    if (!user) { setShowAuthModal(true); return }
+    try {
+      await seedDemoData({ userId: user.id, city: user.preferred_city || 'São Paulo' })
+      await reload()
+    } catch (e) { console.error(e) }
   }
 
   return (
@@ -107,6 +118,7 @@ const HomeContainer: React.FC = () => {
         onLogin={() => setShowAuthModal(true)}
         onLogout={() => supabase.auth.signOut()}
         onCreate={() => (user ? setShowCreate(true) : setShowAuthModal(true))}
+        onSeed={user && process.env.NODE_ENV !== 'production' ? handleSeed : undefined}
       />
       <div className="container mx-auto px-4 py-6">
         <HomeView
